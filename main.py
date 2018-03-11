@@ -15,13 +15,13 @@ if not RUN_ON_CRANE:
 
 flags = tf.app.flags
 if RUN_ON_CRANE:
-    flags.DEFINE_string('data_dir', '/work/cse496dl/shared/hackathon/05/', '')
+    flags.DEFINE_string('data_dir', '/work/cse496dl/tyao/HW3/data/', '')
     flags.DEFINE_string('save_dir', '/work/cse496dl/tyao/output/', '')
 else:
     flags.DEFINE_string('data_dir', 'G:\\CIFAR\\', '')
     flags.DEFINE_string('save_dir', '.\\output\\', 'directory where model graph and weights are saved')
 
-flags.DEFINE_integer('batch_size', 21, '')
+flags.DEFINE_integer('batch_size', 100, '')
 flags.DEFINE_integer('max_epoch_num', 20, '')
 flags.DEFINE_integer('patience', 4, '')
 flags.DEFINE_float('REG_COEFF', 0.0, '')
@@ -30,9 +30,9 @@ FLAGS = flags.FLAGS
 
 def main(argv):
     # 4×4-Fold
-    train_x_1 = np.load(FLAGS.data_dir + 'cifar10_train_data.npy')
+    train_x_1 = np.load(FLAGS.data_dir + 'imagenet_train.npy')
     train_x_1 = train_x_1.reshape([-1, 32, 32, 3])
-    test_x_1 = np.load(FLAGS.data_dir + 'cifar10_test_data.npy')
+    test_x_1 = np.load(FLAGS.data_dir + 'imagenet_test.npy')
     test_x_1 = test_x_1.reshape([-1, 32, 32, 3])
     # Retrieve properties of data
     num_train = train_x_1.shape[0]
