@@ -7,6 +7,7 @@ from util import *
 {'type': 'pool', 'k_size': 2, 'strides': 2, 'name': 'decPool_0'},
 {'type': 'sub2d', 'k_size': 2, 'scale': 2, 'name': 'decSub_0'},
 {'type': 'trans2d', 'filters': 3, 'k_size': 1, 'scale': (1, 1), 'name': 'decConv_0'},
+{'type': 'gan2d', 'filters': 3, 'k_size': 1, 'scale': 1, 'name': 'decConv_1'},
 
 ## Dense (name_scope=_, training=_)
 {'type': 'dense', 'size': 500, 'reg': l2(scale=1.0),'func': relu,'name': 'hidden_layer_1'},
@@ -45,6 +46,7 @@ def decoder_bundle(x,training=None):
         {'type': 'trans2d', 'filters': 6, 'k_size': 2, 'scale': (1, 1), 'name': 'decConv_0'},
         {'type': 'sub2d', 'k_size': 2, 'scale': 2, 'name': 'decSub_0'},
         {'type': 'sub2d', 'k_size': 2, 'scale': 2, 'name': 'decSub_1'},
-        {'type': 'trans2d', 'filters': 3, 'k_size': 1, 'scale': (1, 1), 'name': 'decConv_1'},
+        # {'type': 'trans2d', 'filters': 3, 'k_size': 1, 'scale': (1, 1), 'name': 'decConv_1'},
+        {'type': 'gan2d', 'filters': 3, 'k_size': 1, 'scale': 1, 'name': 'decConv_1'},
     ])
     return conv_layers
