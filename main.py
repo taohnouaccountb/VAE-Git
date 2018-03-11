@@ -1,18 +1,21 @@
-import os
-import tensorflow as tf
-import numpy as np
-from util import PSNR
-from model import encoder_bundle, decoder_bundle
-
 # ENVIRONMENT ARGUMENT
 RUN_ON_CRANE = False
 USE_EARLY_STOPPING = True
 SAVE_MODEL = False
 GPU_ID = '0'
 
+import os
+import tensorflow as tf
+import numpy as np
+from util import PSNR
+from model import encoder_bundle, decoder_bundle
+if not RUN_ON_CRANE:
+    import matplotlib.pyplot as plt
+
+
 flags = tf.app.flags
 if RUN_ON_CRANE:
-    flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/02/EMODB-German/', '')
+    flags.DEFINE_string('data_dir', '/work/cse496dl/shared/hackathon/05/', '')
     flags.DEFINE_string('save_dir', '/work/cse496dl/tyao/output/', '')
 else:
     flags.DEFINE_string('data_dir', 'G:\\CIFAR\\', '')
@@ -21,7 +24,7 @@ else:
 flags.DEFINE_integer('batch_size', 21, '')
 flags.DEFINE_integer('max_epoch_num', 20, '')
 flags.DEFINE_integer('patience', 4, '')
-flags.DEFINE_float('REG_COEFF', 0.00001, '')
+flags.DEFINE_float('REG_COEFF', 0.0, '')
 FLAGS = flags.FLAGS
 
 
@@ -37,13 +40,13 @@ def main(argv):
     # Define Variables and Layers
     train_flag = tf.Variable(True)
     x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='input_placeholder')
-    latent = encoder_bundle(x)
-    output = decoder_bundle(latent)
+    latent = encoder_bundle(x,training=train_flag)
+    output = decoder_bundle(latent,training=train_flag)
 
     # Define enc-dec loss
     PSNR_loss = PSNR(x, output)
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    total_loss = PSNR_loss + FLAGS.REG_COEFF * sum(regularization_losses)
+    total_loss = -PSNR_loss + FLAGS.REG_COEFF * sum(regularization_losses)
 
     # Set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
@@ -70,7 +73,7 @@ def main(argv):
             ce_vals = []
             for i in range(num_train // batch_size):
                 batch_xs = train_x_1[i * batch_size:(i + 1) * batch_size, :]
-                _, train_ce = session.run([train_op, PSNR_loss], {x: batch_xs})
+                _, train_ce = session.run([train_op, total_loss], {x: batch_xs})
                 ce_vals.append(train_ce)
             avg_train_ce = sum(ce_vals) / len(ce_vals)  # after each fold , train err store in kfd_train_err
 
@@ -84,7 +87,6 @@ def main(argv):
 
             # analyse
             avg_vali_ce = sum(ce_vals) / len(ce_vals)
-
             print('TRAIN PSNR LOSS: ' + str(avg_train_ce))
             print('TEST PSNR LOSS: ' + str(avg_vali_ce))
             test_accu_list.append(avg_vali_ce)
@@ -106,7 +108,14 @@ def main(argv):
                                        global_step=global_step_tensor)
                 if early_count > FLAGS.patience:
                     break
-    print("\nEND: ")
+        xx=train_x_1[-1:]
+        output=session.run(output,{x:xx})
+        if not RUN_ON_CRANE:
+            imgplot = plt.imshow(xx[0])
+            plt.show()
+            imgplot = plt.imshow(output[0])
+            plt.show()
+    print("\nEND")
 
 
 if __name__ == "__main__":

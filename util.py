@@ -18,14 +18,13 @@ def random_shuffle(data, label):
 
 
 # Compute PSNR of two tensors
-def PSNR(input, output):
+def PSNR(x, output):
     def log10(x):
         tf.cast(x,tf.float32)
         return tf.log(x) / tf.log(10.0)
-    delta = input-output
+    delta = x-output
     MSE = tf.reduce_mean(tf.square(delta))  # MSE
-    MAX = tf.reduce_max(delta)
-    PSNR = 20 * log10(MAX) - 10 * log10(MSE)
+    PSNR = 20 * log10(255.0) - 10 * log10(MSE)
     return PSNR
 
 
@@ -160,8 +159,8 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
                 raise Exception("Wrong layer type in i_conv_layer")
         conv_layer_out = reduce(lambda lhs, rhs: rhs(lhs), conv_layers)
 
-        block_parameter_num = sum(map(lambda layer: layer.count_params(), conv_layers[1:]))
-        print('Number of parameters in ' + name_scope + ': ', block_parameter_num)
+        # block_parameter_num = sum(map(lambda layer: layer.count_params(), conv_layers[1:]))
+        # print('Number of parameters in ' + name_scope + ': ', block_parameter_num)
         return conv_layer_out
 
 
