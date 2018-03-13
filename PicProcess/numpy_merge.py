@@ -5,7 +5,7 @@ def random_split_data(data, proportion):
     split_idx = int(proportion * size)
     return data[s[:split_idx]], data[s[split_idx:]]
 
-for i in range(1,11):
+for i in range(1,2):
     filename='train_data_batch_'+str(i)
     temp=np.load(filename)
     if i==1:

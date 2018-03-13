@@ -6,14 +6,13 @@ from functools import reduce
 # Compute PSNR of two tensors
 def PSNR(x, output):
     def log10(x):
-        tf.cast(x, tf.float32)
         return tf.log(x) / tf.log(10.0)
-
+    x = tf.cast(x, tf.float32)
+    output = tf.cast(output, tf.float32)
     delta = x - output
     MSE = tf.reduce_mean(tf.square(delta))  # MSE
     PSNR = 20 * log10(255.0) - 10 * log10(MSE)
     return PSNR
-
 
 def soft_add_attribute_to_dict(i, name, attr):
     if name not in i:
@@ -58,7 +57,7 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
         """ [Sub-Pixel Convolution](https://arxiv.org/abs/1609.05158) """
 
         # Filters will be same the input layer
-        def __init__(self, scale, k_size, strides=(1, 1), activation=tf.nn.relu, regularizer=tf.nn.l2_normalize,
+        def __init__(self, scale, k_size, strides=(1, 1), activation=tf.nn.relu, regularizer=tf.contrib.layers.l2_regularizer(scale=1.0),
                      name='inner_layer'):
             self.scale = scale
             self.strides = strides
@@ -83,7 +82,7 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
         """ similar to the upsampling used in [ProgressiveGAN](https://arxiv.org/pdf/1710.10196.pdf) """
 
         def __init__(self, scale, filters, k_size, strides=(1, 1), activation=tf.nn.relu,
-                     regularizer=tf.nn.l2_normalize,
+                     regularizer=tf.contrib.layers.l2_regularizer(scale=1.0),
                      name='inner_layer'):
             self.scale = scale
             self.strides = strides
@@ -110,6 +109,7 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
 
         for i in layers_meta:
             if i['type'] == 'regu2d':
+                i = soft_add_attribute_to_dict(i, 'reg', tf.contrib.layers.l2_regularizer(scale=1.0))
                 conv_layers.append(tf.layers.Conv2D(i['filters'], i['k_size'],
                                                     activation=i['func'],
                                                     strides=i['strides'],
@@ -125,7 +125,7 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
                                                           name=i['name']))
             elif i['type'] == 'trans2d':
                 i = soft_add_attribute_to_dict(i, 'name', 'inner_layer')
-                i = soft_add_attribute_to_dict(i, 'reg', None)
+                i = soft_add_attribute_to_dict(i, 'reg', tf.contrib.layers.l2_regularizer(scale=1.0))
                 i = soft_add_attribute_to_dict(i, 'strides', i['scale'])
                 i = soft_add_attribute_to_dict(i, 'func', tf.nn.relu)
                 conv_layers.append(tf.layers.Conv2DTranspose(i['filters'], i['k_size'],
@@ -137,13 +137,13 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
                                                              name=i['name']))
             elif i['type'] == 'sub2d':
                 i = soft_add_attribute_to_dict(i, 'name', 'inner_layer')
-                i = soft_add_attribute_to_dict(i, 'reg', None)
-                conv_layers.append(SubPixelUpScaling(i['scale'], i['k_size'], name=i['name'], regularizer=None))
+                i = soft_add_attribute_to_dict(i, 'reg', tf.contrib.layers.l2_regularizer(scale=1.0))
+                conv_layers.append(SubPixelUpScaling(i['scale'], i['k_size'], name=i['name'], regularizer=i['reg']))
             elif i['type'] == 'gan2d':
                 i = soft_add_attribute_to_dict(i, 'name', 'inner_layer')
-                i = soft_add_attribute_to_dict(i, 'reg', None)
+                i = soft_add_attribute_to_dict(i, 'reg', tf.contrib.layers.l2_regularizer(scale=1.0))
                 conv_layers.append(
-                    ProgressiveGanUpsampling(i['scale'], i['filters'], i['k_size'], name=i['name'], regularizer=None))
+                    ProgressiveGanUpsampling(i['scale'], i['filters'], i['k_size'], name=i['name'], regularizer=i['reg']))
             else:
                 raise Exception("Wrong layer type in i_conv_layer")
         conv_layer_out = reduce(lambda lhs, rhs: rhs(lhs), conv_layers)

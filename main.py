@@ -1,8 +1,8 @@
 # ENVIRONMENT ARGUMENT
 RUN_ON_CRANE = False
-USE_EARLY_STOPPING = True
+USE_EARLY_STOPPING = False
 SAVE_MODEL = False
-GPU_ID = '0'
+GPU_ID = '1'
 
 import os
 import tensorflow as tf
@@ -16,22 +16,22 @@ if not RUN_ON_CRANE:
 flags = tf.app.flags
 if RUN_ON_CRANE:
     flags.DEFINE_string('data_dir', '/work/cse496dl/tyao/HW3/data/', '')
-    flags.DEFINE_string('save_dir', '/work/cse496dl/tyao/output/', '')
+    flags.DEFINE_string('save_dir', '/work/cse496dl/tyao/HW3/model/', '')
 else:
     flags.DEFINE_string('data_dir', 'G:\\CIFAR\\', '')
     flags.DEFINE_string('save_dir', '.\\output\\', 'directory where model graph and weights are saved')
 
-flags.DEFINE_integer('batch_size', 100, '')
-flags.DEFINE_integer('max_epoch_num', 20, '')
-flags.DEFINE_integer('patience', 4, '')
-flags.DEFINE_float('REG_COEFF', 0.0, '')
+flags.DEFINE_integer('batch_size', 64, '')
+flags.DEFINE_integer('max_epoch_num', 50, '')
+flags.DEFINE_integer('patience', 8, '')
+flags.DEFINE_float('REG_COEFF', 0.01, '')
 FLAGS = flags.FLAGS
 
 
 def main(argv):
     # 4×4-Fold
-    train_x_1 = np.load(FLAGS.data_dir + 'imagenet_train.npy')
-    test_x_1 = np.load(FLAGS.data_dir + 'imagenet_test.npy')
+    train_x_1 = np.load(FLAGS.data_dir + 'real_train.npy')
+    test_x_1 = np.load(FLAGS.data_dir + 'real_test.npy')
     train_x_1 = train_x_1.reshape([-1, 32, 32, 3])
     test_x_1 = test_x_1.reshape([-1, 32, 32, 3])
     train_x_1, vali_x_1 = random_split_data(train_x_1, 0.9)
@@ -41,9 +41,11 @@ def main(argv):
     num_vali = vali_x_1.shape[0]
     # Define Variables and Layers
     train_flag = tf.Variable(True)
-    x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='input_placeholder')
-    latent = encoder_bundle(x,training=train_flag)
-    output = decoder_bundle(latent,training=train_flag)
+    x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='encoder_input')
+    latent = encoder_bundle(x,training=train_flag, name='encoder_output')
+    print(latent)
+    latent = tf.identity(latent, name='decoder_input')
+    output = decoder_bundle(latent,training=train_flag, name='decoder_output')
 
     # Define enc-dec loss
     PSNR_loss = PSNR(x, output)
