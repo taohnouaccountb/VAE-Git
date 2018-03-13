@@ -108,9 +108,9 @@ def main(argv):
                                        global_step=global_step_tensor)
                 if early_count > FLAGS.patience:
                     break
-        xx=train_x_1[-1:]
-        output=session.run(output,{x:xx})
         if not RUN_ON_CRANE:
+            xx=train_x_1[-1:]
+            output=session.run(output,{x:xx})
             imgplot = plt.imshow(xx[0])
             plt.show()
             imgplot = plt.imshow(output[0])

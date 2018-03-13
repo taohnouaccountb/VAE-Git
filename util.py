@@ -3,26 +3,13 @@ import tensorflow as tf
 from functools import reduce
 
 
-# Compute accuracy
-def get_eye_ratio(conf_matrix):
-    eye_matrix = np.eye(conf_matrix.shape[0], conf_matrix.shape[1])
-    return (conf_matrix * eye_matrix).sum() / conf_matrix.sum()
-
-
-# Shuffle the data instances
-def random_shuffle(data, label):
-    assert data.shape[0] == label.shape[0]
-    size = data.shape[0]
-    s = np.random.permutation(size)
-    return data[s], label[s]
-
-
 # Compute PSNR of two tensors
 def PSNR(x, output):
     def log10(x):
-        tf.cast(x,tf.float32)
+        tf.cast(x, tf.float32)
         return tf.log(x) / tf.log(10.0)
-    delta = x-output
+
+    delta = x - output
     MSE = tf.reduce_mean(tf.square(delta))  # MSE
     PSNR = 20 * log10(255.0) - 10 * log10(MSE)
     return PSNR
@@ -162,6 +149,20 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
         # block_parameter_num = sum(map(lambda layer: layer.count_params(), conv_layers[1:]))
         # print('Number of parameters in ' + name_scope + ': ', block_parameter_num)
         return conv_layer_out
+
+
+# Compute accuracy
+def get_eye_ratio(conf_matrix):
+    eye_matrix = np.eye(conf_matrix.shape[0], conf_matrix.shape[1])
+    return (conf_matrix * eye_matrix).sum() / conf_matrix.sum()
+
+
+# Shuffle the data instances
+def random_shuffle(data, label):
+    assert data.shape[0] == label.shape[0]
+    size = data.shape[0]
+    s = np.random.permutation(size)
+    return data[s], label[s]
 
 
 def random_split_data(data, label, proportion):
