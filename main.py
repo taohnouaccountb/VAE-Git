@@ -7,7 +7,7 @@ GPU_ID = '0'
 import os
 import tensorflow as tf
 import numpy as np
-from util import PSNR
+from util import PSNR, random_split_data
 from model import encoder_bundle, decoder_bundle
 if not RUN_ON_CRANE:
     import matplotlib.pyplot as plt
@@ -31,12 +31,14 @@ FLAGS = flags.FLAGS
 def main(argv):
     # 4×4-Fold
     train_x_1 = np.load(FLAGS.data_dir + 'imagenet_train.npy')
-    train_x_1 = train_x_1.reshape([-1, 32, 32, 3])
     test_x_1 = np.load(FLAGS.data_dir + 'imagenet_test.npy')
+    train_x_1 = train_x_1.reshape([-1, 32, 32, 3])
     test_x_1 = test_x_1.reshape([-1, 32, 32, 3])
+    train_x_1, vali_x_1 = random_split_data(train_x_1, 0.9)
     # Retrieve properties of data
     num_train = train_x_1.shape[0]
-    num_vali = test_x_1.shape[0]
+    num_test = test_x_1.shape[0]
+    num_vali = vali_x_1.shape[0]
     # Define Variables and Layers
     train_flag = tf.Variable(True)
     x = tf.placeholder(tf.float32, [None, 32, 32, 3], name='input_placeholder')
@@ -61,7 +63,8 @@ def main(argv):
     with tf.Session(config=config) as session:
         print('Variables in the graph:', np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()]))
         session.run(tf.global_variables_initializer())
-        test_accu_list = []
+        test_loss_list = []
+        vali_loss_list = []
         min_test_val_index = 0
         batch_size = FLAGS.batch_size
         early_count = 0
@@ -76,34 +79,43 @@ def main(argv):
                 _, train_ce = session.run([train_op, total_loss], {x: batch_xs})
                 ce_vals.append(train_ce)
             avg_train_ce = sum(ce_vals) / len(ce_vals)  # after each fold , train err store in kfd_train_err
-
-            # validate
+            # test
             train_flag.assign(False)
             ce_vals = []
-            for i in range(num_vali // FLAGS.batch_size):
+            for i in range(num_test // FLAGS.batch_size):
                 batch_xs = test_x_1[i * batch_size:(i + 1) * batch_size, :]
                 vali_ce = session.run(PSNR_loss, {x: batch_xs})
                 ce_vals.append(vali_ce)
-
-            # analyse
+            avg_test_ce = sum(ce_vals) / len(ce_vals)
+            # validation
+            train_flag.assign(False)
+            ce_vals = []
+            for i in range(num_vali // FLAGS.batch_size):
+                batch_xs = vali_x_1[i * batch_size:(i + 1) * batch_size, :]
+                vali_ce = session.run(PSNR_loss, {x: batch_xs})
+                ce_vals.append(vali_ce)
             avg_vali_ce = sum(ce_vals) / len(ce_vals)
-            print('TRAIN PSNR LOSS: ' + str(avg_train_ce))
-            print('TEST PSNR LOSS: ' + str(avg_vali_ce))
-            test_accu_list.append(avg_vali_ce)
+            # analyse
+
+            print('TRAIN PSNR LOSS: ', avg_train_ce)
+            print('TEST PSNR LOSS: ', avg_test_ce)
+            print('VALI PSNR LOSS: ', avg_vali_ce)
+            test_loss_list.append(avg_test_ce)
+            vali_loss_list.append(avg_vali_ce)
 
             # early stopping
             if USE_EARLY_STOPPING:
-                if len(test_accu_list) > 2:
-                    if test_accu_list[-1] <= test_accu_list[min_test_val_index]:
+                if len(vali_loss_list) > 2:
+                    if vali_loss_list[-1] <= vali_loss_list[min_test_val_index]:
                         early_count = early_count + 1
                     else:
                         early_count = 0
-                        min_test_val_index = len(test_accu_list) - 1
+                        min_test_val_index = len(vali_loss_list) - 1
                         if SAVE_MODEL:
                             file_name = "homework_3-0_{ep}_{rate}_{rate2}".format(ep=epoch,
-                                                                                  rate=int(test_accu_list[-1] * 100),
+                                                                                  rate=int(test_loss_list[-1] * 100),
                                                                                   rate2=int(
-                                                                                      test_accu_list[-1] * 10000 % 100))
+                                                                                      test_loss_list[-1] * 10000 % 100))
                             saver.save(session, os.path.join(FLAGS.save_dir, file_name),
                                        global_step=global_step_tensor)
                 if early_count > FLAGS.patience:

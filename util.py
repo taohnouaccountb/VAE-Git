@@ -107,10 +107,12 @@ def i_conv_layers(input_tensor, layers_meta, name_scope='conv_block'):
     print('CONV_LAYER_STRUCTURE', [i['filters'] if i['type'] == 'regu2d' else 0 for i in layers_meta])
     with tf.name_scope(name_scope) as scope:
         conv_layers = [input_tensor, ]
+
         for i in layers_meta:
             if i['type'] == 'regu2d':
                 conv_layers.append(tf.layers.Conv2D(i['filters'], i['k_size'],
                                                     activation=i['func'],
+                                                    strides=i['strides'],
                                                     kernel_regularizer=i['reg'],
                                                     bias_regularizer=i['reg'],
                                                     padding='same',
@@ -165,7 +167,7 @@ def random_shuffle(data, label):
     return data[s], label[s]
 
 
-def random_split_data(data, label, proportion):
+def random_split_data(data, proportion):
     """
     Split two numpy arrays into two parts of `proportion` and `1 - proportion`
 
@@ -173,8 +175,7 @@ def random_split_data(data, label, proportion):
         - data: numpy array, to be split along the first axis
         - proportion: a float less than 1
     """
-    assert data.shape[0] == label.shape[0]
     size = data.shape[0]
     s = np.random.permutation(size)
     split_idx = int(proportion * size)
-    return data[s[:split_idx]], label[s[:split_idx]], data[s[split_idx:]], label[s[split_idx:]]
+    return data[s[:split_idx]], data[s[split_idx:]]
